@@ -1,0 +1,35 @@
+{
+  "name": "restful-maker",
+  "version": "0.1.0",
+  "description": "a web application that lets you create, save, and play simple 2D platformer levels made using Express, MySQL, and Vue.",
+  "main": "./backend/server.js",
+  "scripts": {
+    "dev": "npx nodemon start",
+    "start": "node ./backend/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thismarvin/restful-monsters.git"
+  },
+  "keywords": [
+    "restful",
+    "database",
+    "platformer"
+  ],
+  "author": "Marvin Valenzuela (thismarvin)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/thismarvin/restful-monsters/issues"
+  },
+  "homepage": "https://github.com/thismarvin/restful-monsters#readme",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "knex": "^0.20.13",
+    "mysql": "^2.18.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.2"
+  }
+}
