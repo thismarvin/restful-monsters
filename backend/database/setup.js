@@ -5,10 +5,10 @@ const db = require("knex")(config);
 
 function verifyConnection() {
     db("users").select("*").then(() => {
-        console.log("Successfully connected to database.")
+        console.log("Successfully connected to database.");
     })
-    .catch(() => {
-        console.log("Could not connect to database.")
+    .catch(err => {
+        console.log(`Could not connect to database. Error: ${err.code}`);
     });
 }
 
