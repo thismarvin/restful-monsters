@@ -3,7 +3,7 @@ const bodyParser = require("body-parser");
 const userRoute = require("./routes/user.js");
 
 const HOST = '0.0.0.0';
-const PORT = 8080;
+const PORT = 9090;
 
 const app = express();
 
@@ -12,7 +12,11 @@ app.use(bodyParser.urlencoded({
 }));
 app.use(bodyParser.json());
 
-app.use("/", userRoute);
+app.use("/api", userRoute);
+
+app.get('/', (req, res) => {
+    res.send("Hello World");
+});
 
 app.listen(PORT, HOST);
 

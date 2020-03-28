@@ -1,14 +1,17 @@
 require("dotenv").config();
+const config = require("../../knexfile.js")[process.env.ENVIRONMENT];
 
-const db = require("knex")({
-    client: 'mysql',
-    connection: {
-        host: process.env.MYSQL_DATABASE_HOST,
-        port: process.env.MYSQL_DATABASE_PORT,
-        user: process.env.MYSQL_USER,
-        password: process.env.MYSQL_ROOT_PASSWORD,
-        database: process.env.MYSQL_DATABASE
-    }
-});
+const db = require("knex")(config);
+
+function verifyConnection() {
+    db("users").select("*").then(() => {
+        console.log("Successfully connected to database.")
+    })
+    .catch(() => {
+        console.log("Could not connect to database.")
+    });
+}
+
+verifyConnection();
 
 module.exports = db;

@@ -4,7 +4,9 @@
   "description": "a web application that lets you create, save, and play simple 2D platformer levels made using Express, MySQL, and Vue.",
   "main": "./backend/server.js",
   "scripts": {
-    "dev": "npx nodemon start",
+    "migrate": "knex migrate:latest",
+    "rollback": "knex migrate:rollback",
+    "dev": "nodemon start",
     "start": "node ./backend/server.js"
   },
   "repository": {
