@@ -9,7 +9,7 @@ router.get("/users", (req, res) => {
         res.json(result);
     })
     .catch(err => {
-        res.json(err);
+        res.status(500).json(err);
     });
 });
 
@@ -25,7 +25,7 @@ router.get("/users/:login", (req, res) => {
         }
     })
     .catch(() => {
-        res.status(400).json(err);
+        res.status(500).json(err);
     });
 });
 
@@ -42,7 +42,7 @@ router.post("/users", (req, res) => {
                 "error": "A user with that login already exists."
             });
         } else {
-            res.status(400).json(err);
+            res.status(500).json(err);
         }
     });
 });
