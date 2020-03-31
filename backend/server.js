@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const userRoute = require("./routes/user.js");
+const levelRoute = require("./routes/level.js");
 
 const HOST = '0.0.0.0';
 const PORT = 9090;
@@ -13,6 +14,7 @@ app.use(bodyParser.urlencoded({
 app.use(bodyParser.json());
 
 app.use("/api", userRoute);
+app.use("/api", levelRoute);
 
 app.get('/', (req, res) => {
     res.send("Hello World");
