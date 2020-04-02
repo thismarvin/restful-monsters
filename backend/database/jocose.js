@@ -1,5 +1,21 @@
 const mysql = require("mysql");
 
+const colorCodes = {
+    "white": "\x1b[37m",
+    "green": "\x1b[32m",
+    "red": "\x1b[31m"
+}
+
+function log(message, color) {
+    let colorCode = colorCodes.white;
+
+    if (color && colorCodes[color]) {
+        colorCode = colorCodes[color];
+    }
+
+    console.log(`${colorCode}${message}${"\x1b[0m"}`);
+}
+
 /**
  * Represents a query to a database.
  * @private
@@ -26,8 +42,15 @@ class Jocose {
      * @param {JSON} options An optional parameter that provides additional information used to enable limited overloading.
      */
     constructor(config, options) {
-        this.db = mysql.createConnection(config);
-        this.connected = false;
+        if (!config) {
+            throw new Error("Expected config parameter.");
+        }
+
+        if (!config["host"] || !config["port"] || !config["user"] || !config["password"] || !config["database"]) {
+            throw new Error("Invalid config syntax.");
+        }
+
+        this.pool = mysql.createPool(config);
         this.debugModeEnabled = false;
         this.queryQueue = [];
 
@@ -41,14 +64,7 @@ class Jocose {
      * @param {Boolean} enabled Whether or not debug mode should be enabled.
      */
     enableDebugMode(enabled) {
-        this.debugModeEnabled = enabled;
-    }
-
-    /**
-     * An asyncronous function that verifies the connection to the database.
-     */
-    async connect() {
-        this.connected = await this.verifyConnection();
+        this.debugModeEnabled = enabled ? enabled : true;
     }
 
     /**
@@ -56,16 +72,16 @@ class Jocose {
      * @param {String} sql The SQL query to run on the current database.
      * @param {String} description An optional parameter that identifies the current query when "debugMode" is enabled.
      */
-    query(sql, description) {
+    async query(sql, description) {
         const showActionOutput = (result) => {
             if (this.debugModeEnabled && description) {
-                const symbol = result ? "✔" : "❌";
-                console.log(`${symbol} : "${description}"`);
+                const symbol = result ? "✔" : "✖";
+                log(`${symbol} : "${description}"`, result ? "green" : "red");
             }
         };
 
         return new Promise((resolve, reject) => {
-            this.db.query(sql, (error, results) => {
+            this.pool.query(sql, (error, results) => {
                 if (error) {
                     showActionOutput(false);
                     reject(error);
@@ -78,47 +94,27 @@ class Jocose {
     }
 
     /**
-     * Queues up a SQL query that can be executed in the future.
+     * Adds a SQL query to the end of the query queue.
      * @param {String} sql The SQL query to run on the current database.
      * @param {String} description An optional parameter that identifies the current query when "debugMode" is enabled via options.
      */
-    queue(sql, description) {
+    enqueue(sql, description) {
         this.queryQueue.push(new Query(sql, description));
     }
 
     /**
-     * An asyncronous function that executes all queued queries concurrently.
+     * Executes all queued queries concurrently and returns the outcome as a Promise.
      */
     async run() {
-        await Promise.all(
+        const results = await Promise.all(
             this.queryQueue.map(command => {
                 return this.query(command.sql, command.description);
             })
         );
 
         this.queryQueue = [];
-    }
 
-    /**
-     * Returns a Promise that checks whether or not the connection to the database is valid.
-     * @private
-     */
-    verifyConnection() {
-        return new Promise(resolve => {
-            this.db.connect((err) => {
-                if (err) {
-                    if (this.debugModeEnabled) {
-                        console.log("Could not connected to database.");
-                    }
-                    resolve(false);
-                } else {
-                    if (this.debugModeEnabled) {
-                        console.log("Successfully connected to database.");
-                    }
-                    resolve(true);
-                }
-            });
-        });
+        return results;
     }
 }
 

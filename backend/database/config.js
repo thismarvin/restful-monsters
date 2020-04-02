@@ -2,16 +2,13 @@ require("dotenv").config();
 
 const config = {
   development: {
-    client: 'mysql',
     connection: {
-      host: process.env.MYSQL_DATABASE_HOST,
-      port: process.env.MYSQL_DATABASE_PORT,
-      user: "root",
-      password: process.env.MYSQL_ROOT_PASSWORD,
-      database: process.env.MYSQL_DATABASE
-    },
-    migrations: {
-      directory: "./backend/database/migrations"
+      "host": process.env.MYSQL_DATABASE_HOST,
+      "port": process.env.MYSQL_DATABASE_PORT,
+      "user": "root",
+      "password": process.env.MYSQL_ROOT_PASSWORD,
+      "database": process.env.MYSQL_DATABASE,
+      "connectionLimit": process.env.MYSQL_CONNECTION_LIMIT
     }
   }
 };

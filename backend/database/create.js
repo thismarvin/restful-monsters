@@ -1,5 +1,6 @@
 const Jocose = require("./jocose.js");
 const config = require("./config.js").getConfig()["connection"];
+const log = require("../utilities.js").log;
 const options = {
     debug: require("../utilities.js").debugArgPresent
 };
@@ -81,22 +82,32 @@ ORDER BY id ASC;
 
 async function create() {
     const jocose = new Jocose(config, options);
-    await jocose.connect();
+    
+    const connected = await jocose.connect();
 
-    jocose.queue(createUsersTable, "Create users Table.");
-    jocose.queue(createLevelsTable, "Create levels Table.");
-    jocose.queue(createBlocksTable, "Create blocks Table.");
+    if (!connected) {
+        log("✖ : Database creation failed, could not connect to database.", "red");
+        process.exit();        
+    }
+
+    jocose.enqueue(createUsersTable, "Create users Table.");
+    jocose.enqueue(createLevelsTable, "Create levels Table.");
+    jocose.enqueue(createBlocksTable, "Create blocks Table.");
     await jocose.run();
 
-    jocose.queue(createUserLevelsTable, "Create user_levels Table.");
-    jocose.queue(createLevelDataTable, "Create level_data Table.");
+    jocose.enqueue(createUserLevelsTable, "Create user_levels Table.");
+    jocose.enqueue(createLevelDataTable, "Create level_data Table.");
     await jocose.run();
 
-    jocose.queue(createLevelsView, "Create v_levels View.");
-    jocose.queue(createBlockView, "Create v_blocks View.");
+    jocose.enqueue(createLevelsView, "Create v_levels View.");
+    jocose.enqueue(createBlockView, "Create v_blocks View.");
     await jocose.run();
 
-    console.log("Database creation complete.");
+    if (jocose.debugModeEnabled) {
+        console.log();
+    }
+
+    log("✔ : Successfully created database.", "green");
     process.exit();
 }
 

@@ -1,5 +1,6 @@
 const Jocose = require("./jocose.js");
 const config = require("./config.js").getConfig()["connection"];
+const log = require("../utilities.js").log;
 const options = {
     debug: require("../utilities.js").debugArgPresent
 };
@@ -14,20 +15,30 @@ async function rollback() {
     }
 
     const jocose = new Jocose(config, options);
-    await jocose.connect();
+    
+    const connected = await jocose.connect();
 
-    jocose.queue(dropTable("user_levels"), "Drop user_levels Table.");
-    jocose.queue(dropTable("level_data"), "Drop level_data Table.");
-    jocose.queue(dropView("v_levels"), "Drop v_levels View.");
-    jocose.queue(dropView("v_blocks"), "Drop v_blocks View.");
+    if (!connected) {
+        log("✖ : Database rollback failed, could not connect to database.", "red");
+        process.exit();
+    }
+
+    jocose.enqueue(dropTable("user_levels"), "Drop user_levels Table.");
+    jocose.enqueue(dropTable("level_data"), "Drop level_data Table.");
+    jocose.enqueue(dropView("v_levels"), "Drop v_levels View.");
+    jocose.enqueue(dropView("v_blocks"), "Drop v_blocks View.");
     await jocose.run();
     
-    jocose.queue(dropTable("users"), "Drop users Table.");
-    jocose.queue(dropTable("levels"), "Drop levels Table.");
-    jocose.queue(dropTable("blocks"), "Drop blocks Table.");
+    jocose.enqueue(dropTable("users"), "Drop users Table.");
+    jocose.enqueue(dropTable("levels"), "Drop levels Table.");
+    jocose.enqueue(dropTable("blocks"), "Drop blocks Table.");
     await jocose.run();
 
-    console.log("Database rollback complete.");
+    if (jocose.debugModeEnabled) {
+        console.log();
+    }
+
+    log("✔ : Successfully rollbacked database.", "green");
     process.exit();
 }
 
