@@ -21,8 +21,8 @@ app.get('/api', (req, res) => {
     res.send({
         users_url: `${HOST}:${PORT}/api/users`,
         levels_url: `${HOST}:${PORT}/api/levels`,
-        user_url: `${HOST}:${PORT}/api/users/{user}`,
-        user_levels_url: `${HOST}:${PORT}/api/levels/{user}`
+        user_url: `${HOST}:${PORT}/api/users/{login}`,
+        user_levels_url: `${HOST}:${PORT}/api/levels/{creator}`
     });
 });
 

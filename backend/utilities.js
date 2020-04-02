@@ -1,10 +1,10 @@
-let actionOutputEnabled = false;
+let debugArgPresent = false;
 process.argv.forEach((val) => {
-    if (val.toLowerCase() === "showactionoutput") {
-        actionOutputEnabled = true;
+    if (val.toLowerCase() === "debug") {
+        debugArgPresent = true;
     }
 });
 
 module.exports = {
-    actionOutputEnabled
+    debugArgPresent
 };

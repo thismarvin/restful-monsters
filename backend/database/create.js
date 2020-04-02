@@ -1,28 +1,8 @@
-const db = require("./setup.js");
-const actionOutputEnabled = require("../utilities.js").actionOutputEnabled;
-
-const options = [
-    {
-        actionOutput: actionOutputEnabled,
-        description: "Create users Table"
-    },
-    {
-        actionOutput: actionOutputEnabled,
-        description: "Create levels Table"
-    },
-    {
-        actionOutput: actionOutputEnabled,
-        description: "Create blocks Table"
-    },
-    {
-        actionOutput: actionOutputEnabled,
-        description: "Create user_levels Table"
-    },
-    {
-        actionOutput: actionOutputEnabled,
-        description: "Create level_data Table"
-    }
-];
+const Jocose = require("./jocose.js");
+const config = require("./config.js").getConfig()["connection"];
+const options = {
+    debug: require("../utilities.js").debugArgPresent
+};
 
 const createUsersTable = `
 CREATE TABLE IF NOT EXISTS users (
@@ -31,7 +11,6 @@ login VARCHAR(32) NOT NULL UNIQUE,
 PRIMARY KEY(id)
 );
 `;
-
 const createLevelsTable = `
 CREATE TABLE IF NOT EXISTS levels (
 id INT NOT NULL AUTO_INCREMENT,
@@ -46,7 +25,6 @@ time_created TIME NOT NULL,
 PRIMARY KEY(id)
 );
 `;
-
 const createBlocksTable = `
 CREATE TABLE IF NOT EXISTS blocks (
 id INT NOT NULL AUTO_INCREMENT,
@@ -54,40 +32,69 @@ name VARCHAR(16) NOT NULL UNIQUE,
 PRIMARY KEY(id)
 );
 `;
-
 const createUserLevelsTable = `
 CREATE TABLE IF NOT EXISTS user_levels (
 user_id INT NOT NULL,
-level_id INT NOT NULL,
-FOREIGN KEY(user_id) REFERENCES users(id),
+level_id INT NOT NULL UNIQUE,
+FOREIGN KEY(user_id) REFERENCES users(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
 FOREIGN KEY(level_id) REFERENCES levels(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
 );
 `;
-
 const createLevelDataTable = `
 CREATE TABLE IF NOT EXISTS level_data (
-level_id INT NOT NULL,
+level_id INT NOT NULL UNIQUE,
 data JSON NOT NULL,
 FOREIGN KEY(level_id) REFERENCES levels(id)
-);  
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+);
+`;
+const createLevelsView = `
+CREATE OR REPLACE VIEW v_levels AS
+SELECT
+users.login AS creator,
+levels.name,
+levels.likes,
+levels.play_count,
+IFNULL(ROUND((levels.completed_count / levels.play_count * 100), 2), 0) AS perctange_complete,
+(TIMESTAMP(levels.date_created, levels.time_created)) as timestamp
+FROM user_levels
+JOIN levels
+ON  user_levels.level_id = levels.id
+JOIN  users
+ON user_levels.user_id = users.id
+ORDER BY users.login;
+`;
+const createBlockView = `
+CREATE OR REPLACE VIEW v_blocks AS
+SELECT 
+id,
+name,
+(HEX(id)) AS symbol
+FROM blocks
+ORDER BY id ASC;
 `;
 
 async function create() {
-    const connected = await db.connected;
-    if (!connected) {
-        process.exit();
-    }
+    const jocose = new Jocose(config, options);
+    await jocose.connect();
 
-    await Promise.all([
-        db.query(createUsersTable, options[0]),
-        db.query(createLevelsTable, options[1]),
-        db.query(createBlocksTable, options[2])
-    ]);
+    jocose.queue(createUsersTable, "Create users Table.");
+    jocose.queue(createLevelsTable, "Create levels Table.");
+    jocose.queue(createBlocksTable, "Create blocks Table.");
+    await jocose.run();
 
-    await Promise.all([
-        db.query(createUserLevelsTable, options[3]),
-        db.query(createLevelDataTable, options[4])
-    ]);
+    jocose.queue(createUserLevelsTable, "Create user_levels Table.");
+    jocose.queue(createLevelDataTable, "Create level_data Table.");
+    await jocose.run();
+
+    jocose.queue(createLevelsView, "Create v_levels View.");
+    jocose.queue(createBlockView, "Create v_blocks View.");
+    await jocose.run();
 
     console.log("Database creation complete.");
     process.exit();
