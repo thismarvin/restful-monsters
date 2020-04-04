@@ -83,33 +83,38 @@ ORDER BY id ASC;
 
 async function create() {
     const jocose = new Jocose(config, options);
-    
-    const connected = await jocose.connect();
 
-    if (!connected) {
-        log("✖ : Database creation failed, could not connect to database.", "red");
-        process.exit();        
+    try {
+        jocose.enqueue(createUsersTable, "Create users Table.");
+        jocose.enqueue(createLevelsTable, "Create levels Table.");
+        jocose.enqueue(createBlocksTable, "Create blocks Table.");
+        await jocose.run();
+
+        jocose.enqueue(createUserLevelsTable, "Create user_levels Table.");
+        jocose.enqueue(createLevelDataTable, "Create level_data Table.");
+        await jocose.run();
+
+        jocose.enqueue(createLevelsView, "Create v_levels View.");
+        jocose.enqueue(createBlockView, "Create v_blocks View.");
+        await jocose.run();
+
+        if (jocose.debugModeEnabled) {
+            console.log();
+        }
+
+        log("✔ : Successfully created database.", "green");
+        process.exit();
+    } catch (error) {
+        switch (error.code) {
+            case "ECONNREFUSED":
+                log("✖ : Database creation failed, could not connect to database.", "red");
+                process.exit();
+
+            default:
+                log("✖ : Something went wrong and I don't even know what!", "red");
+                process.exit();
+        }
     }
-
-    jocose.enqueue(createUsersTable, "Create users Table.");
-    jocose.enqueue(createLevelsTable, "Create levels Table.");
-    jocose.enqueue(createBlocksTable, "Create blocks Table.");
-    await jocose.run();
-
-    jocose.enqueue(createUserLevelsTable, "Create user_levels Table.");
-    jocose.enqueue(createLevelDataTable, "Create level_data Table.");
-    await jocose.run();
-
-    jocose.enqueue(createLevelsView, "Create v_levels View.");
-    jocose.enqueue(createBlockView, "Create v_blocks View.");
-    await jocose.run();
-
-    if (jocose.debugModeEnabled) {
-        console.log();
-    }
-
-    log("✔ : Successfully created database.", "green");
-    process.exit();
 }
 
 create();
