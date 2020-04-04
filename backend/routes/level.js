@@ -1,48 +1,40 @@
 const express = require("express");
-const common = require("./common.js");
+const errors = require("./common/errors.js");
 const db = require("../database/setup.js").jocose;
 
 const router = express.Router();
 
 // Gets all registered levels.
-router.get("/levels", async (req, res) => {
+router.get("/levels", async (_, res) => {
     try {
         const result = await db.query('SELECT * FROM v_levels;');
         res.status(200).json(result);
-        return;
     } catch (error) {
-        if (error.code === "ECONNREFUSED") {
-            common.sendBadGateway(res, "Could not connect to database.");
-            return;
+        switch (error.code) {
+            default:
+                errors.handle(res, error);
+                break;
         }
-
-        res.status(500).json(error);
     }
 });
 
 // Gets all levels from a specific creator.
 router.get("/levels/:creator", async (req, res) => {
     try {
-        const result = await db.query(`SELECT * FROM v_levels WHERE creator="${req.params.creator}";`);
+        const result = await db.query(`SELECT * FROM v_levels WHERE creator='${req.params.creator}';`);
 
         if (result.length === 0) {
-            res.status(404).json({
-                error: {
-                    "code": 404,
-                    "message": "Could not find any levels from that creator."
-                }
-            });
+            errors.sendNotFound(res, "Could not find any levels from that creator.");
             return;
         }
 
         res.status(200).json(result);
     } catch (error) {
-        if (error.code === "ECONNREFUSED") {
-            common.sendBadGateway(res, "Could not connect to database.");
-            return;
+        switch (error.code) {
+            default:
+                errors.handle(res, error);
+                break;
         }
-
-        res.status(500).json(error);
     }
 });
 
@@ -59,12 +51,21 @@ router.post("/levels", async (req, res) => {
      * }
      */
 
-    if (!req.body["creator"] || !req.body["name"] || !req.body["description"] || !req.body["data"]) {
-        res.status(400).json({
-            error: "Invalid request body."
-        });
+    if (!req.body.creator || !req.body.name || !req.body.description || !req.body.data) {
+        errors.sendBadRequest(res, "Invalid request body.");
         return;
     }
+
+    const formatData = data => {
+        let result = data.replace(/'/g, `"`);
+        const keys = result.match(/\w+\s*:/g);
+
+        for (let key of keys) {
+            result = result.replace(key, `"${key.substring(0, key.length - 1)}":`);
+        }
+
+        return result;
+    };
 
     try {
         const insertIntoLevels = `
@@ -81,10 +82,12 @@ router.post("/levels", async (req, res) => {
 
         db.enqueue(`SELECT id FROM users WHERE login="${req.body.creator}";`);
         db.enqueue(`SELECT id FROM levels WHERE name="${req.body.name}";`);
-        const results = await db.run();
+        const [users, levels] = await db.run();
 
-        const creatorID = results[0][0]["id"];
-        const levelID = results[1][0]["id"];
+        const creatorID = users[0].id;
+        const levelID = levels[0].id;
+        const formattedData = formatData(req.body.data);
+        console.log(formattedData);
 
         const insertIntoUserLevels = `
         INSERT INTO user_levels
@@ -100,7 +103,7 @@ router.post("/levels", async (req, res) => {
         (level_id, data)
         VALUES (
         ${levelID},
-        '${req.body.data}'
+        '${formattedData}'
         );
         `;
 
@@ -108,16 +111,21 @@ router.post("/levels", async (req, res) => {
         db.enqueue(insertIntoLevelData);
         await db.run();
 
-        const result = await db.query(`SELECT * FROM v_levels WHERE name="${req.body.name}";`);
+        const result = await db.query(`SELECT * FROM v_levels WHERE id="${levelID}";`);
         res.status(201).json(result);
 
     } catch (error) {
-        if (error.code === "ECONNREFUSED") {
-            common.sendBadGateway(res, "Could not connect to database.");
-            return;
+        switch (error.code) {
+            case "ER_DUP_ENTRY":
+                errors.sendConflict(res, "A level with that name already exists.");
+                break;
+            case "ER_INVALID_JSON_TEXT":
+                errors.sendBadRequest(res, "The level data that was provided was not formatted correctly. Make sure to use valid JSON syntax.");
+                break;
+            default:
+                errors.handle(res, error);
+                break;
         }
-
-        res.status(500).json(error);
     }
 });
 

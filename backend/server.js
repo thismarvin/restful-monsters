@@ -17,7 +17,7 @@ app.use(bodyParser.json());
 app.use("/api", userRoute);
 app.use("/api", levelRoute);
 
-app.get('/api', (req, res) => {
+app.get('/api', (_, res) => {
     res.send({
         users_url: `${HOST}:${PORT}/api/users`,
         levels_url: `${HOST}:${PORT}/api/levels`,

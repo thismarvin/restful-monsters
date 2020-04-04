@@ -1,21 +1,20 @@
 const express = require("express");
-const common = require("./common.js");
+const errors = require("./common/errors.js");
 const db = require("../database/setup.js").jocose;
 
 const router = express.Router();
 
 // Gets all registered users.
-router.get("/users", async (req, res) => {
+router.get("/users", async (_, res) => {
     try {
         const result = await db.query(`SELECT * FROM users ORDER BY id;`);
         res.status(200).json(result);
     } catch (error) {
-        if (error.code === "ECONNREFUSED") {
-            common.sendBadGateway(res, "Could not connect to database.");
-            return;
+        switch (error.code) {
+            default:
+                errors.handle(res, error);
+                break;
         }
-
-        res.status(500).json(error);
     }
 });
 
@@ -25,30 +24,24 @@ router.get("/users/:login", async (req, res) => {
         const result = await db.query(`SELECT * FROM users WHERE login="${req.body.login}";`);
 
         if (result.length === 0) {
-            res.status(404).json({
-                "error": {
-                    "code": 404,
-                    "message": `Could not find a user with that login.`
-                }
-            });
+            errors.sendNotFound(res, "Could not find a user with that login.");
             return;
         }
 
         res.status(200).json(result);
     } catch (error) {
-        if (error.code === "ECONNREFUSED") {
-            common.sendBadGateway(res, "Could not connect to database.");
-            return;
+        switch (error.code) {
+            default:
+                errors.handle(res, error);
+                break;
         }
-
-        res.status(500).json(error);
     }
 });
 
 // Creates a user.
 router.post("/users", async (req, res) => {
-    if (!req.body["login"]) {
-        common.sendBadRequest(res, "Invalid request body.");
+    if (!req.body.login) {
+        errors.sendBadRequest(res, "Invalid request body.");
         return;
     }
 
@@ -57,23 +50,14 @@ router.post("/users", async (req, res) => {
         const result = await db.query(`SELECT * FROM users WHERE login="${req.body.login}";`);
         res.status(201).json(result);
     } catch (error) {
-        if (error.code === "ECONNREFUSED") {
-            common.sendBadGateway(res, "Could not connect to database.");
-            return;
+        switch (error.code) {
+            case "ER_DUP_ENTRY":
+                errors.sendConflict(res, "A user with that login already exists.");
+                break;
+            default:
+                errors.handle(res, error);
+                break;
         }
-
-        if (error.code === "ER_DUP_ENTRY") {
-            res.status(409).json({
-                "error": {
-                    "code": 409,
-                    "message": `A user with that login already exists.`
-                }
-            });
-            return;
-        }
-
-        res.status(500).json(error);
-        return;
     }
 });
 
