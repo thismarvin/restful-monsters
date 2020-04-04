@@ -57,6 +57,7 @@ FOREIGN KEY(level_id) REFERENCES levels(id)
 const createLevelsView = `
 CREATE OR REPLACE VIEW v_levels AS
 SELECT
+levels.id,
 users.login AS creator,
 levels.name,
 levels.likes,
