@@ -7,7 +7,7 @@ const router = express.Router();
 // Gets all registered levels.
 router.get("/levels", async (_, res) => {
     try {
-        const result = await db.query('SELECT * FROM v_levels;');
+        const result = await db.query(`SELECT * FROM v_levels;`);
         res.status(200).json(result);
     } catch (error) {
         switch (error.code) {
@@ -18,25 +18,26 @@ router.get("/levels", async (_, res) => {
     }
 });
 
-// Gets all levels from a specific creator.
-router.get("/levels/:creator", async (req, res) => {
-    try {
-        const result = await db.query(`SELECT * FROM v_levels WHERE creator='${req.params.creator}';`);
+// TODO: This should really be implemented with a query string, not an endpoint.
+// // Gets all levels from a specific creator.
+// router.get("/levels/:creator", async (req, res) => {
+//     try {
+//         const result = await db.query(`SELECT * FROM v_levels WHERE creator='${req.params.creator}';`);
 
-        if (result.length === 0) {
-            errors.sendNotFound(res, "Could not find any levels from that creator.");
-            return;
-        }
+//         if (result.length === 0) {
+//             errors.sendNotFound(res, "Could not find any levels from that creator.");
+//             return;
+//         }
 
-        res.status(200).json(result);
-    } catch (error) {
-        switch (error.code) {
-            default:
-                errors.handle(res, error);
-                break;
-        }
-    }
-});
+//         res.status(200).json(result);
+//     } catch (error) {
+//         switch (error.code) {
+//             default:
+//                 errors.handle(res, error);
+//                 break;
+//         }
+//     }
+// });
 
 // Creates a level.
 router.post("/levels", async (req, res) => {
@@ -122,6 +123,68 @@ router.post("/levels", async (req, res) => {
             case "ER_INVALID_JSON_TEXT":
                 errors.sendBadRequest(res, "The level data that was provided was not formatted correctly. Make sure to use valid JSON syntax.");
                 break;
+            default:
+                errors.handle(res, error);
+                break;
+        }
+    }
+});
+
+router.get("/levels/:id", async (req, res) => {
+    try {
+        const result = await db.query(`SELECT * FROM v_levels WHERE id=${req.params.id};`);
+
+        if (result.length === 0) {
+            errors.sendNotFound(res, "Could not find a level with that id.");
+            return;
+        }
+
+        res.status(200).json(result);
+    } catch (error) {
+        switch (error.code) {
+            default:
+                errors.handle(res, error);
+                break;
+        }
+    }
+});
+
+router.delete("/levels/:id", async (req, res) => {
+    try {
+        // Will this cascade?
+        await db.query(`DELETE FROM user_levels WHERE id=${req.params.id};`);
+
+        res.status(204).json({
+            "message": "Successfully deleted level."
+        });
+    } catch (error) {
+        switch (error.code) {
+            default:
+                errors.handle(res, error);
+                break;
+        }
+    }
+});
+
+// Req must send everything.
+router.put("/levels/:id", async (req, res) => {
+    try {
+        // TODO: Implement 😉
+    } catch (error) {
+        switch (error.code) {
+            default:
+                errors.handle(res, error);
+                break;
+        }
+    }
+});
+
+// Req does not have to update everything.
+router.patch("/levels/:id", async (req, res) => {
+    try {
+        // TODO: Implement 😉
+    } catch (error) {
+        switch (error.code) {
             default:
                 errors.handle(res, error);
                 break;
