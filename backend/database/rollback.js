@@ -17,15 +17,19 @@ async function rollback() {
     const jocose = new Jocose(config, options);
 
     try {
-        jocose.enqueue(dropTable("user_levels"), "Drop user_levels Table.");
-        jocose.enqueue(dropTable("level_data"), "Drop level_data Table.");
+        jocose.enqueue(dropTable("comments"), "Drop comments Table.");
+        jocose.enqueue(dropTable("entity_synopses"), "Drop entity_synopses Table.");
+        jocose.enqueue(dropTable("level_synopses"), "Drop level_synopses Table.");
         jocose.enqueue(dropView("v_levels"), "Drop v_levels View.");
-        jocose.enqueue(dropView("v_blocks"), "Drop v_blocks View.");
+        await jocose.run();
+
+        jocose.enqueue(dropTable("entity_categories"), "Drop entity_categories Table.");
+        jocose.enqueue(dropTable("level_categories"), "Drop level_categories Table.");
+        jocose.enqueue(dropTable("entities"), "Drop entities Table.");
+        jocose.enqueue(dropTable("levels"), "Drop levels Table.");
         await jocose.run();
 
         jocose.enqueue(dropTable("users"), "Drop users Table.");
-        jocose.enqueue(dropTable("levels"), "Drop levels Table.");
-        jocose.enqueue(dropTable("blocks"), "Drop blocks Table.");
         await jocose.run();
 
         if (jocose.debugModeEnabled) {

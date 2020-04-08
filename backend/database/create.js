@@ -9,34 +9,69 @@ const createUsersTable = `
 CREATE TABLE IF NOT EXISTS users (
 id INT NOT NULL AUTO_INCREMENT,
 login VARCHAR(32) NOT NULL UNIQUE,
+password VARCHAR(127) NOT NULL,
+created_on TIMESTAMP NOT NULL,
+PRIMARY KEY(id)
+);
+`;
+const createEntitiesTable = `
+CREATE TABLE IF NOT EXISTS entities (
+id INT NOT NULL AUTO_INCREMENT,
+name VARCHAR(16) NOT NULL UNIQUE,
+PRIMARY KEY(id)
+);
+`;
+const createEntityCategoriesTable = `
+CREATE TABLE IF NOT EXISTS entity_categories (
+id INT NOT NULL AUTO_INCREMENT,
+category VARCHAR(16) NOT NULL UNIQUE,
+PRIMARY KEY(id)
+);
+`;
+const createLevelCategoriesTable = `
+CREATE TABLE IF NOT EXISTS level_categories (
+id INT NOT NULL AUTO_INCREMENT,
+category VARCHAR(16) NOT NULL UNIQUE,
 PRIMARY KEY(id)
 );
 `;
 const createLevelsTable = `
 CREATE TABLE IF NOT EXISTS levels (
 id INT NOT NULL AUTO_INCREMENT,
+user_id INT NOT NULL,
 name VARCHAR(32) NOT NULL,
 description VARCHAR(64) DEFAULT "Have fun!",
-play_count INT UNSIGNED NOT NULL DEFAULT 0,
-completed_count INT UNSIGNED NOT NULL DEFAULT 0,
+data JSON NOT NULL,
+times_played INT UNSIGNED NOT NULL DEFAULT 0,
+times_completed INT UNSIGNED NOT NULL DEFAULT 0,
 likes INT UNSIGNED NOT NULL DEFAULT 0,
 dislikes INT UNSIGNED NOT NULL DEFAULT 0,
-date_created DATE NOT NULL,
-time_created TIME NOT NULL,
-PRIMARY KEY(id)
+created_on TIMESTAMP NOT NULL,
+PRIMARY KEY(id),
+FOREIGN KEY(user_id) REFERENCES users(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
 );
 `;
-const createBlocksTable = `
-CREATE TABLE IF NOT EXISTS blocks (
+const createEntitySynopsesTable = `
+CREATE TABLE IF NOT EXISTS entity_synopses (
+entity_id INT NOT NULL,
+entity_category_id INT NOT NULL,
+FOREIGN KEY(entity_id) REFERENCES entities(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+FOREIGN KEY(entity_category_id) REFERENCES entity_categories(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+);
+`;
+const createCommentsTable = `
+CREATE TABLE IF NOT EXISTS comments (
 id INT NOT NULL AUTO_INCREMENT,
-name VARCHAR(16) NOT NULL UNIQUE,
-PRIMARY KEY(id)
-);
-`;
-const createUserLevelsTable = `
-CREATE TABLE IF NOT EXISTS user_levels (
 user_id INT NOT NULL,
-level_id INT NOT NULL UNIQUE,
+level_id INT NOT NULL,
+text TEXT NOT NULL,
+PRIMARY KEY(id),
 FOREIGN KEY(user_id) REFERENCES users(id)
     ON DELETE CASCADE
     ON UPDATE CASCADE,
@@ -45,11 +80,14 @@ FOREIGN KEY(level_id) REFERENCES levels(id)
     ON UPDATE CASCADE
 );
 `;
-const createLevelDataTable = `
-CREATE TABLE IF NOT EXISTS level_data (
-level_id INT NOT NULL UNIQUE,
-data JSON NOT NULL,
+const createLevelSynopsesTable = `
+CREATE TABLE IF NOT EXISTS level_synopses (
+level_id INT NOT NULL,
+level_category_id INT NOT NULL,
 FOREIGN KEY(level_id) REFERENCES levels(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+FOREIGN KEY(level_category_id) REFERENCES level_categories(id)
     ON DELETE CASCADE
     ON UPDATE CASCADE
 );
@@ -60,25 +98,16 @@ SELECT
 levels.id,
 users.login AS creator,
 levels.name,
+levels.description,
 levels.likes,
-levels.play_count,
-IFNULL(ROUND((levels.completed_count / levels.play_count * 100), 2), 0) AS perctange_complete,
-(TIMESTAMP(levels.date_created, levels.time_created)) as timestamp
-FROM user_levels
-JOIN levels
-ON  user_levels.level_id = levels.id
-JOIN  users
-ON user_levels.user_id = users.id
+levels.dislikes,
+levels.times_played,
+IFNULL(ROUND((levels.times_completed / levels.times_played * 100), 2), 0) AS perctange_complete,
+levels.created_on
+FROM levels
+JOIN users
+ON  levels.user_id = users.id
 ORDER BY users.login;
-`;
-const createBlockView = `
-CREATE OR REPLACE VIEW v_blocks AS
-SELECT 
-id,
-name,
-(HEX(id)) AS symbol
-FROM blocks
-ORDER BY id ASC;
 `;
 
 async function create() {
@@ -86,16 +115,18 @@ async function create() {
 
     try {
         jocose.enqueue(createUsersTable, "Create users Table.");
+        jocose.enqueue(createEntitiesTable, "Create entities Table.");
+        jocose.enqueue(createEntityCategoriesTable, "Create entity_categories Table.");
+        jocose.enqueue(createLevelCategoriesTable, "Create level_categories Table.");
+        await jocose.run();
+
         jocose.enqueue(createLevelsTable, "Create levels Table.");
-        jocose.enqueue(createBlocksTable, "Create blocks Table.");
+        jocose.enqueue(createEntitySynopsesTable, "Create entity_synopses Table.");
         await jocose.run();
 
-        jocose.enqueue(createUserLevelsTable, "Create user_levels Table.");
-        jocose.enqueue(createLevelDataTable, "Create level_data Table.");
-        await jocose.run();
-
+        jocose.enqueue(createCommentsTable, "Create comments Table.");
+        jocose.enqueue(createLevelSynopsesTable, "Create level_synopses View.");
         jocose.enqueue(createLevelsView, "Create v_levels View.");
-        jocose.enqueue(createBlockView, "Create v_blocks View.");
         await jocose.run();
 
         if (jocose.debugModeEnabled) {
