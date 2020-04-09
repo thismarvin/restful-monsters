@@ -1,5 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
+const morgan = require("morgan");
 
 const userRoute = require("./routes/user.js");
 const levelRoute = require("./routes/level.js");
@@ -14,6 +15,7 @@ app.use(bodyParser.urlencoded({
     extended: true
 }));
 app.use(bodyParser.json());
+app.use(morgan("tiny"));
 
 app.use("/api", userRoute);
 app.use("/api", levelRoute);
