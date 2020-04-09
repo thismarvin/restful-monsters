@@ -1,6 +1,7 @@
 const express = require("express");
-const bodyParser = require("body-parser");
+const helmet = require("helmet");
 const morgan = require("morgan");
+const bodyParser = require("body-parser");
 
 const userRoute = require("./routes/user.js");
 const levelRoute = require("./routes/level.js");
@@ -11,12 +12,15 @@ const PORT = 9090;
 
 const app = express();
 
+// Middleware
+app.use(helmet());
+app.use(morgan("tiny"));
 app.use(bodyParser.urlencoded({
     extended: true
 }));
 app.use(bodyParser.json());
-app.use(morgan("tiny"));
 
+// Routes
 app.use("/api", userRoute);
 app.use("/api", levelRoute);
 app.use("/api", blockRoute);
