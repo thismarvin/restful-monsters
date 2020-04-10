@@ -85,10 +85,11 @@ class Jocose {
                 if (error) {
                     showActionOutput(false);
                     reject(error);
-                }
 
-                showActionOutput(true);
-                resolve(results);
+                } else {
+                    showActionOutput(true);
+                    resolve(results);
+                }
             });
         });
     }
