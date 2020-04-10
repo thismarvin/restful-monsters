@@ -10,23 +10,28 @@ async function rollback() {
         return `DROP TABLE IF EXISTS ${tableName};`;
     }
 
-    const dropView = viewName => {
-        return `DROP VIEW IF EXISTS ${viewName};`;
-    }
-
     const jocose = new Jocose(config, options);
 
     try {
-        jocose.enqueue(dropTable("comments"), "Drop comments Table.");
+        jocose.enqueue(dropTable("followers"), "Drop comments Table.");
         jocose.enqueue(dropTable("entity_synopses"), "Drop entity_synopses Table.");
+        jocose.enqueue(dropTable("level_activity"), "Drop level_activity Table.");
         jocose.enqueue(dropTable("level_synopses"), "Drop level_synopses Table.");
-        jocose.enqueue(dropView("v_levels"), "Drop v_levels View.");
+        jocose.enqueue(dropTable("level_comments"), "Drop level_synopses Table.");
+        jocose.enqueue(dropTable("level_feedback"), "Drop level_synopses Table.");
+        jocose.enqueue(dropTable("level_collection_levels"), "Drop level_synopses Table.");
+        jocose.enqueue(dropTable("level_collection_synopses"), "Drop level_synopses Table.");
+        jocose.enqueue(dropTable("level_collection_comments"), "Drop level_synopses Table.");
+        jocose.enqueue(dropTable("level_collection_feedback"), "Drop level_synopses Table.");
         await jocose.run();
 
-        jocose.enqueue(dropTable("entity_categories"), "Drop entity_categories Table.");
-        jocose.enqueue(dropTable("level_categories"), "Drop level_categories Table.");
         jocose.enqueue(dropTable("entities"), "Drop entities Table.");
-        jocose.enqueue(dropTable("levels"), "Drop levels Table.");
+        jocose.enqueue(dropTable("entity_categories"), "Drop entity_categories Table.");
+        jocose.enqueue(dropTable("levels"), "Drop entity_categories Table.");
+        jocose.enqueue(dropTable("level_collection"), "Drop entity_categories Table.");
+        jocose.enqueue(dropTable("level_categories"), "Drop level_categories Table.");
+        jocose.enqueue(dropTable("feedback"), "Drop level_categories Table.");
+        jocose.enqueue(dropTable("comments"), "Drop levels Table.");
         await jocose.run();
 
         jocose.enqueue(dropTable("users"), "Drop users Table.");
