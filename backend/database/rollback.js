@@ -28,7 +28,7 @@ async function rollback() {
         jocose.enqueue(dropTable("entities"), "Drop entities Table.");
         jocose.enqueue(dropTable("entity_categories"), "Drop entity_categories Table.");
         jocose.enqueue(dropTable("levels"), "Drop entity_categories Table.");
-        jocose.enqueue(dropTable("level_collection"), "Drop entity_categories Table.");
+        jocose.enqueue(dropTable("level_collections"), "Drop entity_categories Table.");
         jocose.enqueue(dropTable("level_categories"), "Drop level_categories Table.");
         jocose.enqueue(dropTable("feedback"), "Drop level_categories Table.");
         jocose.enqueue(dropTable("comments"), "Drop levels Table.");
@@ -43,14 +43,18 @@ async function rollback() {
 
         log("✔ : Successfully rollbacked database.", "green");
         process.exit();
-    } catch {
+    } catch (error) {
+        if (jocose.debugModeEnabled) {
+            console.log();
+        }
+
         switch (error.code) {
             case "ECONNREFUSED":
                 log("✖ : Database rollback failed, could not connect to database.", "red");
                 process.exit();
 
             default:
-                log("✖ : Something went wrong and I don't even know what!", "red");
+                log(`✖ : Something went wrong! ${error.code}`, "red");
                 process.exit();
         }
     }

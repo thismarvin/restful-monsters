@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     id INT NOT NULL AUTO_INCREMENT,
     login VARCHAR(32) NOT NULL UNIQUE,
     password VARCHAR(127) NOT NULL,
-    created_on TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL,
     PRIMARY KEY(id)
 );
 `;
@@ -35,20 +35,18 @@ CREATE TABLE IF NOT EXISTS level_categories (
     PRIMARY KEY(id)
 );
 `;
-const createLevelActivityTable = `
-CREATE TABLE IF NOT EXISTS level_activity (
-    level_id INT NOT NULL,
+
+const createFollowersTable = `
+CREATE TABLE IF NOT EXISTS followers (
     user_id INT NOT NULL,
-    completed BOOL NOT NULL DEFAULT false,
-    created_on TIMESTAMP NOT NULL,
-    updated_on TIMESTAMP NOT NULL,
-    PRIMARY KEY(level_id, user_id),
-    FOREIGN KEY(level_id) REFERENCES levels(id)
+    follower_id INT NOT NULL,
+    PRIMARY KEY(user_id, follower_id),
+    FOREIGN KEY(user_id) REFERENCES users(id)
         ON DELETE CASCADE
         ON UPDATE CASCADE,
-    FOREIGN KEY(user_id) REFERENCES users(id)
-       ON DELETE CASCADE
-       ON UPDATE CASCADE
+    FOREIGN KEY(follower_id) REFERENCES users(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 `;
 const createFeedbackTable = `
@@ -58,7 +56,7 @@ CREATE TABLE IF NOT EXISTS feedback (
     liked BOOL NOT NULL DEFAULT false,
     disliked BOOL NOT NULL DEFAULT false,
     flagged BOOL NOT NULL DEFAULT false,
-    updated_on TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
     PRIMARY KEY(id, user_id),
     FOREIGN KEY(user_id) REFERENCES users(id)
         ON DELETE CASCADE
@@ -70,8 +68,8 @@ CREATE TABLE IF NOT EXISTS comments (
     id INT NOT NULL AUTO_INCREMENT,
     user_id INT NOT NULL,
     text TEXT NOT NULL,
-    created_on TIMESTAMP NOT NULL,
-    updated_on TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
     PRIMARY KEY(id, user_id),
     FOREIGN KEY(user_id) REFERENCES users(id)
         ON DELETE CASCADE
@@ -91,19 +89,6 @@ CREATE TABLE IF NOT EXISTS entity_synopses (
        ON UPDATE CASCADE
 );
 `;
-const createFollowersTable = `
-CREATE TABLE IF NOT EXISTS followers (
-    user_id INT NOT NULL,
-    follower_id INT NOT NULL,
-    PRIMARY KEY(user_id, follower_id),
-    FOREIGN KEY(user_id) REFERENCES users(id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE,
-    FOREIGN KEY(follower_id) REFERENCES users(id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
-);
-`;
 const createLevelsTable = `
 CREATE TABLE IF NOT EXISTS levels (
     id INT NOT NULL AUTO_INCREMENT,
@@ -113,7 +98,7 @@ CREATE TABLE IF NOT EXISTS levels (
     data JSON NOT NULL,
     times_played INT UNSIGNED NOT NULL DEFAULT 0,
     times_completed INT UNSIGNED NOT NULL DEFAULT 0,
-    created_on TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL,
     PRIMARY KEY(id, user_id),
     FOREIGN KEY(user_id) REFERENCES users(id)
         ON DELETE CASCADE
@@ -127,12 +112,29 @@ CREATE TABLE IF NOT EXISTS level_collections (
     name VARCHAR(32) NOT NULL,
     description VARCHAR(64) NOT NULL DEFAULT "",
     data JSON NOT NULL,
-    created_on TIMESTAMP NOT NULL,
-    updated_on TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
     PRIMARY KEY(id, user_id),
     FOREIGN KEY(user_id) REFERENCES users(id)
         ON DELETE CASCADE
         ON UPDATE CASCADE
+);
+`;
+
+const createLevelActivityTable = `
+CREATE TABLE IF NOT EXISTS level_activity (
+    level_id INT NOT NULL,
+    user_id INT NOT NULL,
+    completed BOOL NOT NULL DEFAULT false,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
+    PRIMARY KEY(level_id, user_id),
+    FOREIGN KEY(level_id) REFERENCES levels(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    FOREIGN KEY(user_id) REFERENCES users(id)
+       ON DELETE CASCADE
+       ON UPDATE CASCADE
 );
 `;
 const createLevelSynopsesTable = `
@@ -237,21 +239,21 @@ async function create() {
         jocose.enqueue(createLevelCategoriesTable, "Create level_categories Table.");
         await jocose.run();
 
-        jocose.enqueue(createLevelActivityTable, "Create level_activity Table.");
+        jocose.enqueue(createFollowersTable, "Create followers Table.");
         jocose.enqueue(createFeedbackTable, "Create feedback Table.");
         jocose.enqueue(createCommentsTable, "Create comments Table.");
         jocose.enqueue(createEntitySynopsesTable, "Create entity_synopses Table.");
-        jocose.enqueue(createFollowersTable, "Create followers Table.");
         jocose.enqueue(createLevelsTable, "Create levels Table.");
         jocose.enqueue(createLevelCollectionsTable, "Create level_collection Table.");
         await jocose.run();
 
-        jocose.enqueue(createLevelSynopsesTable, "Create level_synopses View.");
+        jocose.enqueue(createLevelActivityTable, "Create level_activity Table.");
+        jocose.enqueue(createLevelSynopsesTable, "Create level_synopses Table.");
         jocose.enqueue(createLevelFeedbackTable, "Create level_feedback Table.");
-        jocose.enqueue(createLevelCommentsTable, "Create level_comments View.");
-        jocose.enqueue(createLevelCollectionLevelsTable, "Create level_collection_levels View.");
-        jocose.enqueue(createLevelCollectionSynopsesTable, "Create level_collection_synopses View.");
-        jocose.enqueue(createLevelCollectionFeedbackTable, "Create level_collection_feedback View.");
+        jocose.enqueue(createLevelCommentsTable, "Create level_comments Table.");
+        jocose.enqueue(createLevelCollectionLevelsTable, "Create level_collection_levels Table.");
+        jocose.enqueue(createLevelCollectionSynopsesTable, "Create level_collection_synopses Table.");
+        jocose.enqueue(createLevelCollectionFeedbackTable, "Create level_collection_feedback Table.");
         jocose.enqueue(createLevelCollectionCommentsTable, "Create level_collection_comments Table.");
         await jocose.run();
 
@@ -262,13 +264,17 @@ async function create() {
         log("✔ : Successfully created database.", "green");
         process.exit();
     } catch (error) {
+        if (jocose.debugModeEnabled) {
+            console.log();
+        }
+
         switch (error.code) {
             case "ECONNREFUSED":
                 log("✖ : Database creation failed, could not connect to database.", "red");
                 process.exit();
 
             default:
-                log("✖ : Something went wrong and I don't even know what!", "red");
+                log(`✖ : Something went wrong! ${error.code}`, "red");
                 process.exit();
         }
     }
