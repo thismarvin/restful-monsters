@@ -6,10 +6,8 @@
  */
 function sendBadRequest(res, message) {
     res.status(400).json({
-        "error": {
-            "code": 400,
-            "message": message ? message : `Bad Request.`
-        }
+        "code": 400,
+        "message": message ? message : "Bad Request."
     });
 }
 
@@ -21,10 +19,8 @@ function sendBadRequest(res, message) {
  */
 function sendNotFound(res, message) {
     res.status(404).json({
-        "error": {
-            "code": 404,
-            "message": message ? message : `Not Found.`
-        }
+        "code": 404,
+        "message": message ? message : "Not Found."
     });
 }
 
@@ -36,10 +32,8 @@ function sendNotFound(res, message) {
  */
 function sendConflict(res, message) {
     res.status(409).json({
-        "error": {
-            "code": 409,
-            "message": message ? message : `Conflict.`
-        }
+        "code": 409,
+        "message": message ? message : "Conflict."
     });
 }
 
@@ -51,10 +45,8 @@ function sendConflict(res, message) {
  */
 function sendInternalServerError(res, message) {
     res.status(500).json({
-        "error": {
-            "code": 500,
-            "message": message ? message : `Internal Server Error.`
-        }
+        "code": 500,
+        "message": message ? message : "Internal Server Error."
     });
 }
 
@@ -66,10 +58,8 @@ function sendInternalServerError(res, message) {
  */
 function sendBadGateway(res, message) {
     res.status(502).json({
-        "error": {
-            "code": 502,
-            "message": message ? message : `Bad Gateway.`
-        }
+        "code": 502,
+        "message": message ? message : "Bad Gateway."
     });
 }
 
@@ -85,7 +75,7 @@ function handle(res, error) {
             break;
 
         default:
-            sendInternalServerError(res, error);
+            sendInternalServerError(res, error.message);
             break;
     }
 }
