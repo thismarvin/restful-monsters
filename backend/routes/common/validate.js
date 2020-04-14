@@ -21,7 +21,7 @@ class UserValidator {
         const formattedPassword = this.formatPassword(password);
 
         if (this.validatePassword(formattedPassword)) {
-            return await bcrypt.hash(password, this.saltRounds);
+            return await bcrypt.hash(formattedPassword, this.saltRounds);
         }
     }
 
