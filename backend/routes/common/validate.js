@@ -17,6 +17,10 @@ class UserValidator {
         }
     }
 
+    /**
+     * Formats, validates, and hashes a given password, and returns the result.
+     * @param {String} password The password to format, validate, and hash.
+     */
     async processPassword(password) {
         const formattedPassword = this.formatPassword(password);
 
@@ -66,10 +70,18 @@ class UserValidator {
         return true;
     }
 
+    /**
+     * Formats a given password, and returns the result as a String.
+     * @param {String} password The password to format.
+     */
     formatPassword(password) {
         return password.toString().trim();
     }
 
+    /**
+     * Tests whether or not a given password is valid. Throws an error otherwise.
+     * @param {String} password A formatted password to validate.
+     */
     validatePassword(password) {
         if (password.length < 8) {
             throw {
