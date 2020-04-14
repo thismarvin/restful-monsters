@@ -96,8 +96,6 @@ CREATE TABLE IF NOT EXISTS levels (
     name VARCHAR(32) NOT NULL,
     description VARCHAR(64) NOT NULL DEFAULT "",
     data JSON NOT NULL,
-    times_played INT UNSIGNED NOT NULL DEFAULT 0,
-    times_completed INT UNSIGNED NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL,
     PRIMARY KEY(id, user_id),
     FOREIGN KEY(user_id) REFERENCES users(id)
