@@ -43,10 +43,14 @@ function validatePassword(password) {
     return validated;
 }
 
+async function hashPassword(password) {
+    return await bcrypt.hash(password, 10);
+}
+
 async function validateUser(user) {
     const username = validateUsername(user.username);
     const password = validatePassword(user.password);
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = hashPassword(password);
 
     return {
         "username": username,
@@ -55,5 +59,7 @@ async function validateUser(user) {
 }
 
 module.exports = {
+    validateUsername,
+    hashPassword,
     validateUser
 };
