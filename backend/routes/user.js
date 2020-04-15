@@ -14,8 +14,8 @@ router.post("/users", async (req, res) => {
     }
 
     try {
-        const username = validation.processUsername(req.body.username);
-        const password = await validation.processPassword(req.body.password);
+        const username = validation.userValidater.processUsername(req.body.username);
+        const password = await validation.userValidater.processPassword(req.body.password);
 
         const insertUserResponse = await db.query(`INSERT INTO users (login, password, created_at) VALUES ("${username}", "${password}", CURRENT_TIMESTAMP());`);
         const selectUserResponse = await db.query(`SELECT id, login, created_at FROM users WHERE id="${insertUserResponse.insertId}";`);
@@ -65,8 +65,8 @@ router.put("/users/:username", async (req, res) => {
     }
 
     try {
-        const username = validation.processUsername(req.body.username);
-        const password = await validation.processPassword(req.body.password);
+        const username = validation.userValidater.processUsername(req.body.username);
+        const password = await validation.userValidater.processPassword(req.body.password);
 
         const selectUserResponse = await db.query(`SELECT id, login, created_at FROM users WHERE login="${req.params.username}";`);
 
@@ -119,12 +119,12 @@ router.patch("/users/:username", async (req, res) => {
         let modifications = [];
 
         if (req.body.username) {
-            username = validation.processUsername(req.body.username);
+            username = validation.userValidater.processUsername(req.body.username);
             modifications.push(`login="${username}"`);
         }
 
         if (req.body.password) {
-            password = await validation.processPassword(req.body.password);
+            password = await validation.userValidater.processPassword(req.body.password);
             modifications.push(`password="${password}"`);
         }
 
