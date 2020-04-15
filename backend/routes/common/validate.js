@@ -51,6 +51,7 @@ class UserValidator {
                 "validationError": true
             };
         }
+
         if (username.length > 32) {
             throw {
                 "code": "USERNAME_TOO_LONG",
@@ -95,9 +96,120 @@ class UserValidator {
     }
 }
 
+class LevelValidator {
+    constructor() {
+
+    }
+
+    processUserId(userId) {
+        const formattedUserId = this.formatUserId(userId);
+        if (this.validateUserId(formattedUserId)) {
+            return userId;
+        }
+    }
+
+    processName(name) {
+        const formattedName = this.formatName(name);
+
+        if (this.validateName(formattedName)) {
+            return `"${formattedName}"`;
+        }
+    }
+
+    processData(data) {
+        return `"${this.formatData(data)}"`;
+    }
+
+    processDescription(description) {
+        const formattedDescription = this.formatDescription(description);
+
+        if (this.validateDescription(formattedDescription)) {
+            return `"${formattedDescription}"`;
+        }
+    }
+
+    formatUserId(userId) {
+        return parseInt(userId);
+    }
+
+    validateUserId(userId) {
+        if (typeof userId !== "number") {
+            throw {
+                "code": "USERID_EXPECTED_NUMBER",
+                "message": "A valid user id must be a number.",
+                "validationError": true
+            };
+        }
+
+        return true;
+    }
+
+
+    formatName(name) {
+        return name.toString().trim().replace(/'|"/g, `""`);;
+    }
+
+    validateName(name) {
+        if (name.length === 0) {
+            throw {
+                "code": "NAME_TOO_SHORT",
+                "message": "A valid level name must be at least one character long.",
+                "validationError": true
+            };
+        }
+
+        if (name.length > 32) {
+            throw {
+                "code": "NAME_TOO_LONG",
+                "message": "A valid level name cannot be longer than 32 characters.",
+                "validationError": true
+            };
+        }
+
+        return true;
+    }
+
+    formatDescription(description) {
+        return description.toString().trim().replace(/'|"/g, `""`);
+    }
+
+    validateDescription(description) {
+        if (description.length > 64) {
+            throw {
+                "code": "DESCRIPTION_TOO_LONG",
+                "message": "A level description cannot be longer than 32 characters.",
+                "validationError": true
+            };
+        }
+
+        return true;
+    }
+
+    formatData(data) {
+        let result = data.replace(/'|"/g, `""`);
+        const invalidKeys = result.match(/\w+\s*:/g);
+
+        if (invalidKeys) {
+            for (let key of invalidKeys) {
+                result = result.replace(key, `""${key.substring(0, key.length - 1)}"":`);
+            }
+        }
+
+        return result;
+    }
+
+    // TODO: Make a regex that can catch ER_INVALID_JSON_TEXT early instead of having MySQL complain.
+    // validateData(data) {
+    //     // I do not think this will work long term!
+    //     //{\n*("[a-z]+":"([A-Z0-9]+\.[A-Z0-9]+,*)+",*\n*)+\n*}
+    //     return true;
+    // }
+}
+
 const userValidater = new UserValidator();
+const levelValidator = new LevelValidator();
 
 module.exports = {
-    processUsername: userValidater.processUsername.bind(userValidater),
-    processPassword: userValidater.processPassword.bind(userValidater)
+    userValidater,
+    levelValidator
 };
