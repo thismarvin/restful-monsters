@@ -5,7 +5,6 @@ const db = require("../database/setup.js").jocose;
 
 const router = express.Router();
 
-
 //#region CRUD
 router.post("/levels", async (req, res) => {
     if (!req.body.userId || !req.body.name || !req.body.description || !req.body.data) {
@@ -232,7 +231,26 @@ router.patch("/levels/:id", async (req, res) => {
 });
 
 router.delete("/levels/:id", async (req, res) => {
+    const levelId = parseInt(req.params.id);
 
+    if (levelId != req.params.id) {
+        errors.sendBadRequest(res, "The given level id is invalid. A number was expected.");
+        return;
+    }
+
+    try {
+        const selectLevelResponse = await db.query(`SELECT id FROM levels WHERE id=${levelId};`);
+
+        if (selectLevelResponse.length === 0) {
+            errors.sendNotFound(res, "Could not find a level with that id.");
+            return;
+        }
+
+        await db.query(`DELETE FROM levels WHERE id =${req.params.id};`);
+        res.status(204).json();
+    } catch (error) {
+
+    }
 });
 //#endregion
 
