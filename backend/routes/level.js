@@ -93,6 +93,7 @@ router.put("/levels/:id", async (req, res) => {
     }
 
     try {
+        const selectLevelResponse = await db.query(`SELECT id FROM levels WHERE id =${levelId};`);
         const modifications = [];
 
         modifications.push({
@@ -107,9 +108,12 @@ router.put("/levels/:id", async (req, res) => {
         modifications.push({
             "data": validation.levelValidator.processData(req.body.data)
         });
-        modifications.push({
-            "created_at": "CURRENT_TIMESTAMP()"
-        });
+
+        if (selectLevelResponse.length === 0) {
+            modifications.push({
+                "created_at": "CURRENT_TIMESTAMP()"
+            });
+        }
 
         const tables = [];
         const values = [];
@@ -118,8 +122,6 @@ router.put("/levels/:id", async (req, res) => {
             tables.push(Object.keys(modification)[0]);
             values.push(Object.values(modification)[0]);
         }
-
-        const selectLevelResponse = await db.query(`SELECT id FROM levels WHERE id =${levelId};`);
 
         if (selectLevelResponse.length === 0) {
             const insertLevelResponse = await db.query(`INSERT INTO levels (${tables.toString()}) VALUES (${values.toString()});`);
@@ -130,6 +132,7 @@ router.put("/levels/:id", async (req, res) => {
             for (let i = 0; i < modifications.length; i++) {
                 updates.push(`${tables[i]}=${values[i]}`);
             }
+
             await db.query(`UPDATE levels SET ${updates.toString()} WHERE id=${levelId};`);
             const selectUpdatedLevelResponse = await db.query(`SELECT * FROM levels WHERE id=${levelId};`);
             res.status(200).json(selectUpdatedLevelResponse[0]);
@@ -152,7 +155,80 @@ router.put("/levels/:id", async (req, res) => {
 });
 
 router.patch("/levels/:id", async (req, res) => {
+    if (!req.body.userId && !req.body.name && !req.body.description && !req.body.data) {
+        errors.sendBadRequest(res, `Invalid request body. Expected 'userId', 'name', 'description', or 'data' keys and values.`);
+        return;
+    }
 
+    const levelId = parseInt(req.params.id);
+
+    if (levelId != req.params.id) {
+        errors.sendBadRequest(res, "The given level id is invalid. A number was expected.");
+        return;
+    }
+
+    try {
+        const selectLevelResponse = await db.query(`SELECT id FROM levels WHERE id =${levelId};`);
+
+        if (selectLevelResponse.length === 0) {
+            errors.sendNotFound(res, "Could not find a level with that id.");
+            return;
+        }
+
+        const modifications = [];
+
+        if (req.body.userId) {
+            modifications.push({
+                "user_id": validation.levelValidator.processUserId(req.body.userId)
+            });
+        }
+        if (req.body.name) {
+            modifications.push({
+                "name": validation.levelValidator.processName(req.body.name)
+            });
+        }
+        if (req.body.description) {
+            modifications.push({
+                "description": validation.levelValidator.processDescription(req.body.description)
+            });
+        }
+        if (req.body.data) {
+            modifications.push({
+                "data": validation.levelValidator.processData(req.body.data)
+            });
+        }
+
+        const tables = [];
+        const values = [];
+
+        for (let modification of modifications) {
+            tables.push(Object.keys(modification)[0]);
+            values.push(Object.values(modification)[0]);
+        }
+
+        const updates = [];
+        for (let i = 0; i < modifications.length; i++) {
+            updates.push(`${tables[i]}=${values[i]}`);
+        }
+
+        await db.query(`UPDATE levels SET ${updates.toString()} WHERE id=${levelId};`);
+        const selectUpdatedLevelResponse = await db.query(`SELECT * FROM levels WHERE id=${levelId};`);
+        res.status(200).json(selectUpdatedLevelResponse[0]);
+    } catch (error) {
+        if (error.validationError) {
+            errors.sendBadRequest(res, error.message);
+            return;
+        }
+
+        switch (error.code) {
+            case "ER_INVALID_JSON_TEXT":
+                errors.sendBadRequest(res, "The level data that was provided was not formatted correctly. Make sure to use valid JSON syntax.");
+                break;
+            default:
+                errors.handle(res, error);
+                break;
+        }
+    }
 });
 
 router.delete("/levels/:id", async (req, res) => {
