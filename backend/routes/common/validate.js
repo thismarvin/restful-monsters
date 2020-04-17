@@ -13,7 +13,7 @@ class UserValidator {
         const formattedUsername = this.formatUsername(username);
 
         if (this.validateUsername(formattedUsername)) {
-            return formattedUsername;
+            return `"${formattedUsername}"`;
         }
     }
 
@@ -25,7 +25,8 @@ class UserValidator {
         const formattedPassword = this.formatPassword(password);
 
         if (this.validatePassword(formattedPassword)) {
-            return await bcrypt.hash(formattedPassword, this.saltRounds);
+            const hashedPassword = await bcrypt.hash(formattedPassword, this.saltRounds);
+            return `"${hashedPassword}"`;
         }
     }
 

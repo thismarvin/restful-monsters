@@ -1,25 +1,48 @@
 const express = require("express");
 const errors = require("./common/errors.js");
 const validation = require("./common/validate.js");
+const RequestHelper = require("./common/requestHelper.js");
 const db = require("../database/setup.js").jocose;
 
 const router = express.Router();
 
+const keys = new Set([
+    "username",
+    "password"
+]);
+
 //#region CRUD
 // Creates a user.
 router.post("/users", async (req, res) => {
-    if (!req.body.username || !req.body.password) {
-        errors.sendBadRequest(res, `Invalid request body. Expected 'username' and 'password' keys and values.`);
-        return;
-    }
-
     try {
-        const username = validation.userValidater.processUsername(req.body.username);
-        const password = await validation.userValidater.processPassword(req.body.password);
+        if (!RequestHelper.expectFullBody(req, keys)) {
+            errors.sendBadRequest(res, "Invalid request body. Expected the body to contain all of the following keys: 'username' and 'password'.");
+            return;
+        }
 
-        const insertUserResponse = await db.query(`INSERT INTO users (login, password, created_at) VALUES ("${username}", "${password}", CURRENT_TIMESTAMP());`);
+        const modifications = [];
+
+        modifications.push({
+            "login": validation.userValidater.processUsername(req.body.username)
+        });
+        modifications.push({
+            "password": await validation.userValidater.processPassword(req.body.password)
+        });
+        modifications.push({
+            "created_at": "CURRENT_TIMESTAMP()"
+        });
+
+        const tables = [];
+        const values = [];
+
+        for (let modification of modifications) {
+            tables.push(Object.keys(modification)[0]);
+            values.push(Object.values(modification)[0]);
+        }
+
+        const insertUserResponse = await db.query(`INSERT INTO users (${tables.toString()}) VALUES (${values.toString()});`);
         const selectUserResponse = await db.query(`SELECT id, login, created_at FROM users WHERE id="${insertUserResponse.insertId}";`);
-        res.status(201).json(selectUserResponse);
+        res.status(201).json(selectUserResponse[0]);
     } catch (error) {
         if (error.validationError) {
             errors.sendBadRequest(res, error.message);
@@ -59,25 +82,49 @@ router.get("/users/:username", async (req, res) => {
 
 // Updates everything about a user.
 router.put("/users/:username", async (req, res) => {
-    if (!req.body.username || !req.body.password) {
-        errors.sendBadRequest(res, `Invalid request body. Expected 'username' and 'password' keys and values.`);
-        return;
-    }
-
     try {
-        const username = validation.userValidater.processUsername(req.body.username);
-        const password = await validation.userValidater.processPassword(req.body.password);
+        if (!RequestHelper.expectFullBody(req, keys)) {
+            errors.sendBadRequest(res, "Invalid request body. Expected the body to contain all of the following keys: 'username' and 'password'.");
+            return;
+        }
 
-        const selectUserResponse = await db.query(`SELECT id, login, created_at FROM users WHERE login="${req.params.username}";`);
+        const selectUserResponse = await db.query(`SELECT id FROM users WHERE login="${req.params.username}";`);
+        const userId = selectUserResponse[0].id;
+        const modifications = [];
+
+        modifications.push({
+            "login": validation.userValidater.processUsername(req.body.username)
+        });
+        modifications.push({
+            "password": await validation.userValidater.processPassword(req.body.password)
+        });
 
         if (selectUserResponse.length === 0) {
-            const insertUserResponse = await db.query(`INSERT INTO users (login, password, created_at) VALUES ("${username}", "${password}", CURRENT_TIMESTAMP());`);
+            modifications.push({
+                "created_at": "CURRENT_TIMESTAMP()"
+            });
+        }
+
+        const tables = [];
+        const values = [];
+
+        for (let modification of modifications) {
+            tables.push(Object.keys(modification)[0]);
+            values.push(Object.values(modification)[0]);
+        }
+
+        if (selectUserResponse.length === 0) {
+            const insertUserResponse = await db.query(`INSERT INTO users (${tables.toString()}) VALUES (${values.toString()});`);
             const selectCreatedUserResponse = await db.query(`SELECT id, login, created_at FROM users WHERE id="${insertUserResponse.insertId}";`);
             res.status(201).json(selectCreatedUserResponse[0]);
         } else {
-            const userID = selectUserResponse[0].id;
-            await db.query(`UPDATE users SET login="${username}", password="${password}" WHERE id = ${userID};`);
-            const selectUpdatedUserResponse = await db.query(`SELECT id, login, created_at FROM users WHERE id=${userID};`);
+            const updates = [];
+            for (let i = 0; i < modifications.length; i++) {
+                updates.push(`${tables[i]}=${values[i]}`);
+            }
+
+            await db.query(`UPDATE users SET ${updates.toString()} WHERE id=${userId};`);
+            const selectUpdatedUserResponse = await db.query(`SELECT id, login, created_at FROM users WHERE id=${userId};`);
             res.status(200).json(selectUpdatedUserResponse[0]);
         }
     } catch (error) {
@@ -99,37 +146,48 @@ router.put("/users/:username", async (req, res) => {
 
 // Updates a specific value of a user.
 router.patch("/users/:username", async (req, res) => {
-    if (!req.body.username && !req.body.password) {
-        errors.sendBadRequest(res, `Invalid request body. Expected 'username' or 'password' key and values.`);
-        return;
-    }
-
     try {
+        if (!RequestHelper.expectMinimumBody(req, keys)) {
+            errors.sendBadRequest(res, "Invalid request body. Expected the body to contain at least one of the following keys: 'username' and 'password'.");
+            return;
+        }
+
         const selectUserResponse = await db.query(`SELECT id FROM users WHERE login="${req.params.username}";`);
+        const userId = selectUserResponse[0].id;
 
         if (selectUserResponse.length === 0) {
             errors.sendNotFound(res, "Could not find a user with that username.");
             return;
         }
 
-        const userID = selectUserResponse[0].id;
-
-        let username = null;
-        let password = null;
-        let modifications = [];
+        const modifications = [];
 
         if (req.body.username) {
-            username = validation.userValidater.processUsername(req.body.username);
-            modifications.push(`login="${username}"`);
+            modifications.push({
+                "login": validation.userValidater.processUsername(req.body.username)
+            });
         }
-
         if (req.body.password) {
-            password = await validation.userValidater.processPassword(req.body.password);
-            modifications.push(`password="${password}"`);
+            modifications.push({
+                "password": await validation.userValidater.processPassword(req.body.password)
+            });
         }
 
-        await db.query(`UPDATE users SET ${modifications.toString()} WHERE id = ${userID}`);
-        const selectUpdatedUserResponse = await db.query(`SELECT id, login, created_at FROM users WHERE id=${userID};`);
+        const tables = [];
+        const values = [];
+
+        for (let modification of modifications) {
+            tables.push(Object.keys(modification)[0]);
+            values.push(Object.values(modification)[0]);
+        }
+
+        const updates = [];
+        for (let i = 0; i < modifications.length; i++) {
+            updates.push(`${tables[i]}=${values[i]}`);
+        }
+
+        await db.query(`UPDATE users SET ${updates.toString()} WHERE id=${userId};`);
+        const selectUpdatedUserResponse = await db.query(`SELECT id, login, created_at FROM users WHERE id=${userId};`);
         res.status(200).json(selectUpdatedUserResponse[0]);
     } catch (error) {
         if (error.validationError) {
@@ -158,9 +216,7 @@ router.delete("/users/:username", async (req, res) => {
             return;
         }
 
-        const userID = selectUserResponse[0].id;
-
-        await db.query(`DELETE FROM users WHERE id=${userID};`);
+        await db.query(`DELETE FROM users WHERE id=${selectUserResponse[0].id};`);
         res.status(204).json();
     } catch (error) {
         switch (error.code) {
@@ -175,8 +231,8 @@ router.delete("/users/:username", async (req, res) => {
 // Gets all registered users.
 router.get("/users", async (_, res) => {
     try {
-        const selectUserResponse = await db.query(`SELECT id, login, created_at FROM users ORDER BY id;`);
-        res.status(200).json(selectUserResponse);
+        const selectUsersResponse = await db.query(`SELECT id, login, created_at FROM users ORDER BY id;`);
+        res.status(200).json(selectUsersResponse);
     } catch (error) {
         switch (error.code) {
             default:
@@ -189,15 +245,14 @@ router.get("/users", async (_, res) => {
 // Gets all levels from a specific user.
 router.get("/users/:username/levels", async (req, res) => {
     try {
-        const selectUserResponse = await db.query(`SELECT id, login, created_at FROM users WHERE login="${req.params.username}";`);
+        const selectUserResponse = await db.query(`SELECT id FROM users WHERE login="${req.params.username}";`);
 
         if (selectUserResponse.length === 0) {
             errors.sendNotFound(res, "Could not find a user with that username.");
             return;
         }
 
-        const userID = selectUserResponse[0].id;
-        const selectLevelsResponse = await db.query(`SELECT id, name, description, data, created_at FROM levels WHERE user_id = ${userID};`);
+        const selectLevelsResponse = await db.query(`SELECT * FROM levels WHERE user_id = ${selectUserResponse[0].id};`);
 
         res.status(200).json(selectLevelsResponse);
     } catch (error) {

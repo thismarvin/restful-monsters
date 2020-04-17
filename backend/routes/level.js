@@ -1,18 +1,38 @@
 const express = require("express");
 const errors = require("./common/errors.js");
 const validation = require("./common/validate.js");
+const RequestHelper = require("./common/requestHelper.js");
 const db = require("../database/setup.js").jocose;
 
 const router = express.Router();
 
-//#region CRUD
-router.post("/levels", async (req, res) => {
-    if (!req.body.userId || !req.body.name || !req.body.description || !req.body.data) {
-        errors.sendBadRequest(res, `Invalid request body. Expected 'userId', 'name', 'description', and 'data' keys and values.`);
-        return;
+const keys = new Set([
+    "userId",
+    "name",
+    "description",
+    "data"
+]);
+
+function processLevelId(req) {
+    const levelId = parseInt(req.params.id);
+
+    if (levelId != req.params.id) {
+        throw {
+            "code": "PARAMS_INVALID_ID"
+        };
     }
 
+    return levelId;
+}
+
+//#region CRUD
+router.post("/levels", async (req, res) => {
     try {
+        if (!RequestHelper.expectFullBody(req, keys)) {
+            errors.sendBadRequest(res, "Invalid request body. Expected 'userId', 'name', 'description', and 'data' keys and values.");
+            return;
+        }
+
         const modifications = [];
 
         modifications.push({
@@ -61,7 +81,8 @@ router.post("/levels", async (req, res) => {
 
 router.get("/levels/:id", async (req, res) => {
     try {
-        const selectLevelResponse = await db.query(`SELECT * FROM levels WHERE id=${req.params.id};`);
+        const levelId = processLevelId(req);
+        const selectLevelResponse = await db.query(`SELECT * FROM levels WHERE id=${levelId};`);
 
         if (selectLevelResponse.length === 0) {
             errors.sendNotFound(res, "Could not find a level with that id.");
@@ -71,6 +92,9 @@ router.get("/levels/:id", async (req, res) => {
         res.status(200).json(selectLevelResponse[0]);
     } catch (error) {
         switch (error.code) {
+            case "PARAMS_INVALID_ID":
+                errors.sendBadRequest(res, "The given level id is invalid. A number was expected.");
+                break;
             default:
                 errors.handle(res, error);
                 break;
@@ -79,19 +103,13 @@ router.get("/levels/:id", async (req, res) => {
 });
 
 router.put("/levels/:id", async (req, res) => {
-    if (!req.body.userId || !req.body.name || !req.body.description || !req.body.data) {
-        errors.sendBadRequest(res, `Invalid request body. Expected 'userId', 'name', 'description', and 'data' keys and values.`);
-        return;
-    }
-
-    const levelId = parseInt(req.params.id);
-
-    if (levelId != req.params.id) {
-        errors.sendBadRequest(res, "The given level id is invalid. A number was expected.");
-        return;
-    }
-
     try {
+        if (!RequestHelper.expectFullBody(req, keys)) {
+            errors.sendBadRequest(res, "Invalid request body. Expected 'userId', 'name', 'description', and 'data' keys and values.");
+            return;
+        }
+
+        const levelId = processLevelId(req);
         const selectLevelResponse = await db.query(`SELECT id FROM levels WHERE id =${levelId};`);
         const modifications = [];
 
@@ -143,6 +161,9 @@ router.put("/levels/:id", async (req, res) => {
         }
 
         switch (error.code) {
+            case "PARAMS_INVALID_ID":
+                errors.sendBadRequest(res, "The given level id is invalid. A number was expected.");
+                break;
             case "ER_INVALID_JSON_TEXT":
                 errors.sendBadRequest(res, "The level data that was provided was not formatted correctly. Make sure to use valid JSON syntax.");
                 break;
@@ -154,19 +175,13 @@ router.put("/levels/:id", async (req, res) => {
 });
 
 router.patch("/levels/:id", async (req, res) => {
-    if (!req.body.userId && !req.body.name && !req.body.description && !req.body.data) {
-        errors.sendBadRequest(res, `Invalid request body. Expected 'userId', 'name', 'description', or 'data' keys and values.`);
-        return;
-    }
-
-    const levelId = parseInt(req.params.id);
-
-    if (levelId != req.params.id) {
-        errors.sendBadRequest(res, "The given level id is invalid. A number was expected.");
-        return;
-    }
-
     try {
+        if (!RequestHelper.expectMinimumBody(req, keys)) {
+            errors.sendBadRequest(res, "Invalid request body. Expected 'userId', 'name', 'description', or 'data' keys and values.");
+            return;
+        }
+
+        const levelId = processLevelId(req);
         const selectLevelResponse = await db.query(`SELECT id FROM levels WHERE id =${levelId};`);
 
         if (selectLevelResponse.length === 0) {
@@ -220,6 +235,9 @@ router.patch("/levels/:id", async (req, res) => {
         }
 
         switch (error.code) {
+            case "PARAMS_INVALID_ID":
+                errors.sendBadRequest(res, "The given level id is invalid. A number was expected.");
+                break;
             case "ER_INVALID_JSON_TEXT":
                 errors.sendBadRequest(res, "The level data that was provided was not formatted correctly. Make sure to use valid JSON syntax.");
                 break;
@@ -231,14 +249,8 @@ router.patch("/levels/:id", async (req, res) => {
 });
 
 router.delete("/levels/:id", async (req, res) => {
-    const levelId = parseInt(req.params.id);
-
-    if (levelId != req.params.id) {
-        errors.sendBadRequest(res, "The given level id is invalid. A number was expected.");
-        return;
-    }
-
     try {
+        const levelId = processLevelId(req);
         const selectLevelResponse = await db.query(`SELECT id FROM levels WHERE id=${levelId};`);
 
         if (selectLevelResponse.length === 0) {
@@ -249,7 +261,14 @@ router.delete("/levels/:id", async (req, res) => {
         await db.query(`DELETE FROM levels WHERE id =${req.params.id};`);
         res.status(204).json();
     } catch (error) {
-
+        switch (error.code) {
+            case "PARAMS_INVALID_ID":
+                errors.sendBadRequest(res, "The given level id is invalid. A number was expected.");
+                break;
+            default:
+                errors.handle(res, error);
+                break;
+        }
     }
 });
 //#endregion
